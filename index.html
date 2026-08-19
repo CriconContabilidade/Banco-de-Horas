@@ -233,7 +233,12 @@ function dayDelta(dia, expected){
   if(occ === "ferias" || occ === "feriado") return 0;
   if(occ === "falta") return -expected;
   if(occ === "folga") return -expected;
-  return workedMinutes(dia) - expected;
+  const worked = workedMinutes(dia);
+  // Dia em branco (nenhum horário digitado e nenhuma ocorrência marcada) =
+  // considerado um dia normal, sem impacto no banco de horas. Só conta
+  // diferença quando algo foi de fato preenchido (hora extra ou atraso).
+  if(worked === 0) return 0;
+  return worked - expected;
 }
 function diaDescontaFerias(dia){
   const occ = (dia && dia.ocorrencia) || "";
@@ -507,6 +512,8 @@ function renderMeuPonto(){
     </table>
     </div>
     <div class="legend">
+      Dia em branco (sem horário e sem ocorrência) = dia normal, não desconta nada do banco de horas — não precisa preencher todo dia, só o que sair do padrão.<br>
+      Preencha os horários apenas para registrar <b>hora extra</b> (saiu depois do horário) ou <b>atraso</b> (chegou depois/saiu antes) — a diferença entra no saldo automaticamente.<br>
       Ocorrências: <b>Falta</b> = desconta o dia do banco de horas e 1 dia da férias a vencer.
       <b>Férias</b> = desconta 1 dia da férias a vencer, sem afetar o banco de horas.
       <b>Folga (compensação)</b> = usa horas do banco para cobrir o dia, sem afetar as férias.
