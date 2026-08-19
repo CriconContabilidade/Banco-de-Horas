@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banco de Horas - Cricon</title>
+<style>
+  :root {
+    --bg: #0f1720;
+    --card-bg: #1a2431;
+    --card-hover: #22303f;
+    --accent: #3b82f6;
+    --accent-dim: #2a5aa8;
+    --text: #e6edf3;
+    --text-dim: #94a3b8;
+    --border: #2a3644;
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: linear-gradient(180deg, var(--bg) 0%, #0a0f16 100%);
+    color: var(--text);
+  }
+  a { color: var(--accent); }
+  button { font-family: inherit; }
+  input, select { font-family: inherit; }
+
+  #loginScreen { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
+  #loginScreen form {
+    width: 100%; max-width: 340px; background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 14px;
+  }
+  #loginScreen h1 { text-align:center; font-size:1.3rem; margin:0 0 4px; }
+  #loginScreen .sub { text-align:center; color:var(--text-dim); font-size:0.85rem; margin:0 0 10px; }
+  #loginScreen label { font-size: 0.82rem; color: var(--text-dim); display: block; margin-bottom: 5px; }
+  #loginScreen input {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: #0f1720; color: var(--text); font-size: 0.95rem;
+  }
+  #loginScreen input:focus { outline: none; border-color: var(--accent); }
+  #loginScreen button[type="submit"] {
+    background: var(--accent); color: white; border: none; border-radius: 8px; padding: 11px;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 4px;
+  }
+  #loginScreen button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
+  #loginError { color: var(--red); font-size: 0.85rem; text-align: center; min-height: 1.2em; }
+
+  .topbar {
+    display:flex; align-items:center; justify-content:space-between; padding:14px 22px;
+    border-bottom:1px solid var(--border); background:#0d141c; position:sticky; top:0; z-index:5; flex-wrap:wrap; gap:10px;
+  }
+  .topbar h1 { font-size:1.1rem; margin:0; }
+  .topbar .sub { color:var(--text-dim); font-size:0.78rem; }
+  .userbar { display:flex; align-items:center; gap:10px; font-size:0.82rem; color:var(--text-dim); }
+  .userbar button {
+    background:none; border:1px solid var(--border); color:var(--text-dim); border-radius:8px;
+    padding:6px 12px; font-size:0.78rem; cursor:pointer;
+  }
+  .userbar button:hover { border-color:var(--accent); color:var(--text); }
+  .badge-admin { background:var(--accent-dim); color:white; padding:2px 8px; border-radius:20px; font-size:0.72rem; }
+
+  .tabs { display:flex; gap:8px; padding:14px 22px 0; flex-wrap:wrap; }
+  .tab {
+    background: var(--card-bg); border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 10px; padding: 8px 14px; font-size: 0.86rem; font-weight: 600; cursor: pointer;
+  }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 18px 22px 60px; }
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom:18px; }
+  .card h2 { font-size:1rem; margin:0 0 14px; }
+  .row { display:flex; gap:14px; flex-wrap:wrap; }
+
+  .stat { flex:1; min-width:150px; background:#141d28; border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+  .stat .label { font-size:0.76rem; color:var(--text-dim); margin-bottom:4px; }
+  .stat .value { font-size:1.5rem; font-weight:700; }
+  .stat .value.pos { color: var(--green); }
+  .stat .value.neg { color: var(--red); }
+
+  .month-nav { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .month-nav button { background:var(--card-hover); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 12px; cursor:pointer; }
+  .month-nav .label { font-weight:600; min-width:150px; text-align:center; }
+
+  table { width:100%; border-collapse: collapse; font-size:0.82rem; }
+  th, td { border:1px solid var(--border); padding:6px 5px; text-align:center; }
+  th { background:#141d28; color:var(--text-dim); font-weight:600; font-size:0.72rem; text-transform:uppercase; }
+  td.dowend { background:#171012; }
+  tr.weekend td { background: #191418; }
+  tr.today td { outline: 2px solid var(--accent); outline-offset:-2px; }
+  input.timecell {
+    width: 62px; background:#0f1720; border:1px solid var(--border); color:var(--text);
+    border-radius:6px; padding:4px; text-align:center; font-size:0.8rem;
+  }
+  input.timecell:focus { outline:none; border-color:var(--accent); }
+  select.occ {
+    background:#0f1720; border:1px solid var(--border); color:var(--text); border-radius:6px;
+    padding:4px 2px; font-size:0.74rem;
+  }
+  td.saldo.pos { color: var(--green); font-weight:600; }
+  td.saldo.neg { color: var(--red); font-weight:600; }
+  .toggle3 { display:flex; align-items:center; gap:8px; font-size:0.82rem; color:var(--text-dim); margin-bottom:10px; }
+
+  .legend { font-size:0.76rem; color:var(--text-dim); margin-top:10px; line-height:1.6; }
+
+  .funclist { display:flex; flex-direction:column; gap:8px; }
+  .funcrow {
+    display:flex; align-items:center; gap:14px; background:#141d28; border:1px solid var(--border);
+    border-radius:10px; padding:10px 14px; flex-wrap:wrap;
+  }
+  .funcrow .name { font-weight:600; flex:1; min-width:160px; }
+  .funcrow .email { color:var(--text-dim); font-size:0.78rem; }
+  .funcrow button {
+    background:var(--card-hover); border:1px solid var(--border); color:var(--text); border-radius:8px;
+    padding:6px 12px; cursor:pointer; font-size:0.8rem;
+  }
+  .funcrow button:hover { border-color:var(--accent); }
+
+  .btn { background:var(--accent); color:white; border:none; border-radius:8px; padding:9px 16px; font-size:0.85rem; font-weight:600; cursor:pointer; }
+  .btn.ghost { background:var(--card-hover); border:1px solid var(--border); color:var(--text); }
+  .btn:hover { filter:brightness(1.1); }
+
+  .savehint { font-size:0.74rem; color:var(--text-dim); margin-top:6px; }
+
+  .jornada-grid { display:grid; grid-template-columns:auto repeat(4,1fr); gap:6px; align-items:center; font-size:0.8rem; }
+  .jornada-grid .dname { color:var(--text-dim); }
+
+  #printArea { display:none; }
+  @media print {
+    body * { visibility:hidden; }
+    #printArea, #printArea * { visibility:visible; }
+    #printArea { display:block !important; position:absolute; top:0; left:0; width:100%; padding:10px; color:#000; background:#fff; }
+    #printArea h1 { font-size:18px; margin:0 0 2px; }
+    #printArea h2 { font-size:12.5px; font-weight:500; color:#555; margin:0 0 14px; }
+    #printArea table { width:100%; border-collapse:collapse; font-size:11px; }
+    #printArea th, #printArea td { border:1px solid #999; padding:6px 8px; text-align:left; color:#000; }
+    #printArea th { background:#eee; }
+  }
+
+  .loading { text-align:center; padding:60px; color:var(--text-dim); }
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">Carregando…</div></div>
+<div id="printArea"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+  setPersistence, browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// Mesmo projeto Firebase do Hub de Ferramentas (login compartilhado no
+// domínio criconcontabilidade.github.io).
+const firebaseConfig = {
+  apiKey: "AIzaSyBJF5e8R1kXmOc8u_e6wHpwwD4hYHJQcv4",
+  authDomain: "fechamento-contabil-7f0b7.firebaseapp.com",
+  projectId: "fechamento-contabil-7f0b7",
+  storageBucket: "fechamento-contabil-7f0b7.firebasestorage.app",
+  messagingSenderId: "661081450640",
+  appId: "1:661081450640:web:dd144f63730a6a48465015",
+  measurementId: "G-8M7FRZQ79C"
+};
+
+const ADMIN_EMAILS = ["contabilidadecricon@gmail.com", "guilherme.primetherapy@gmail.com"];
+const COL_FUNC = "ponto_funcionarios";
+const COL_REG = "ponto_registros";
+const DOW = ["dom","seg","ter","qua","qui","sex","sab"];
+const DOW_LABEL = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+const OCC_LABEL = { "": "—", falta: "Falta", ferias: "Férias", folga: "Folga (compensação)", feriado: "Feriado" };
+
+const JORNADA_PADRAO = {
+  dom: { ativo:false }, sab: { ativo:false },
+  seg: { ativo:true, ent1:"08:00", sai1:"12:00", ent2:"13:00", sai2:"18:00" },
+  ter: { ativo:true, ent1:"08:00", sai1:"12:00", ent2:"13:00", sai2:"18:00" },
+  qua: { ativo:true, ent1:"08:00", sai1:"12:00", ent2:"13:00", sai2:"18:00" },
+  qui: { ativo:true, ent1:"08:00", sai1:"12:00", ent2:"13:00", sai2:"18:00" },
+  sex: { ativo:true, ent1:"08:00", sai1:"12:00", ent2:"13:00", sai2:"17:00" },
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+function emailKey(email){
+  return (email || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "_");
+}
+function isAdminEmail(email){
+  return ADMIN_EMAILS.includes((email||"").trim().toLowerCase());
+}
+function parseHM(str){
+  if(!str) return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(str.trim());
+  if(!m) return null;
+  const h = parseInt(m[1],10), mi = parseInt(m[2],10);
+  if(isNaN(h)||isNaN(mi)) return null;
+  return h*60+mi;
+}
+function fmtMin(min, showSign){
+  min = Math.round(min);
+  const sign = min < 0 ? "-" : (showSign ? "+" : "");
+  min = Math.abs(min);
+  const h = Math.floor(min/60), m = min%60;
+  return `${sign}${h}:${String(m).padStart(2,"0")}`;
+}
+function expectedMinutes(dayCfg){
+  if(!dayCfg || !dayCfg.ativo) return 0;
+  let total = 0;
+  for(const p of [["ent1","sai1"],["ent2","sai2"]]){
+    const a = parseHM(dayCfg[p[0]]), b = parseHM(dayCfg[p[1]]);
+    if(a!=null && b!=null && b>a) total += (b-a);
+  }
+  return total;
+}
+function workedMinutes(dia){
+  if(!dia) return 0;
+  let total = 0;
+  for(const p of [["ent1","sai1"],["ent2","sai2"],["ent3","sai3"]]){
+    const a = parseHM(dia[p[0]]), b = parseHM(dia[p[1]]);
+    if(a!=null && b!=null && b>a) total += (b-a);
+  }
+  return total;
+}
+function dayDelta(dia, expected){
+  const occ = (dia && dia.ocorrencia) || "";
+  if(occ === "ferias" || occ === "feriado") return 0;
+  if(occ === "falta") return -expected;
+  if(occ === "folga") return -expected;
+  return workedMinutes(dia) - expected;
+}
+function diaDescontaFerias(dia){
+  const occ = (dia && dia.ocorrencia) || "";
+  return (occ === "falta" || occ === "ferias") ? 1 : 0;
+}
+function monthKey(ano, mes){ return `${ano}-${String(mes).padStart(2,"0")}`; }
+function daysInMonth(ano, mes){ return new Date(ano, mes, 0).getDate(); }
+function todayYMD(){ const d=new Date(); return {ano:d.getFullYear(), mes:d.getMonth()+1, dia:d.getDate()}; }
+
+/* ---------------- state ---------------- */
+let state = {
+  screen: "boot", // boot | login | app
+  user: null,
+  isAdmin: false,
+  tab: "meuponto", // meuponto | ferias | funcionarios
+  viewEmail: null, // qual funcionário está sendo visto/editado
+  cur: todayYMD(),
+  funcDoc: null,
+  regDoc: null,
+  show3: false,
+  funcList: [],
+  loadingReg: false,
+  saveTimer: null,
+  saveStatus: "",
+};
+
+async function ensureFuncDoc(email){
+  const key = emailKey(email);
+  const ref = doc(db, COL_FUNC, key);
+  const snap = await getDoc(ref);
+  if(snap.exists()) return { id:key, ...snap.data() };
+  const novo = {
+    email: email.toLowerCase(),
+    nome: email.split("@")[0],
+    jornada: JORNADA_PADRAO,
+    feriasSaldoBase: 30,
+    feriasBaseEm: new Date().toISOString().slice(0,10),
+    ativo: true,
+    criadoEm: Date.now()
+  };
+  await setDoc(ref, novo);
+  return { id:key, ...novo };
+}
+
+async function loadRegistro(email, ano, mes){
+  const key = emailKey(email);
+  const id = `${key}_${monthKey(ano,mes)}`;
+  const ref = doc(db, COL_REG, id);
+  const snap = await getDoc(ref);
+  if(snap.exists()) return { id, ...snap.data() };
+  return { id, ownerEmail: email.toLowerCase(), emailKey:key, ano, mes, dias:{} };
+}
+
+async function saveRegistro(regDoc){
+  const ref = doc(db, COL_REG, regDoc.id);
+  await setDoc(ref, {
+    ownerEmail: regDoc.ownerEmail, emailKey: regDoc.emailKey,
+    ano: regDoc.ano, mes: regDoc.mes, dias: regDoc.dias, updatedAt: Date.now()
+  });
+}
+
+async function saveFuncDoc(funcDoc){
+  const ref = doc(db, COL_FUNC, funcDoc.id);
+  const { id, ...data } = funcDoc;
+  await setDoc(ref, data);
+}
+
+async function loadAllFuncionarios(){
+  const snap = await getDocs(collection(db, COL_FUNC));
+  const list = [];
+  snap.forEach(d => list.push({ id:d.id, ...d.data() }));
+  list.sort((a,b) => (a.nome||"").localeCompare(b.nome||""));
+  return list;
+}
+
+async function loadAllRegistros(email){
+  const key = emailKey(email);
+  const q = query(collection(db, COL_REG), where("emailKey","==",key));
+  const snap = await getDocs(q);
+  const list = [];
+  snap.forEach(d => list.push({ id:d.id, ...d.data() }));
+  return list;
+}
+
+function computeSaldoBanco(registros, jornada){
+  let totalMin = 0;
+  for(const reg of registros){
+    for(const diaStr of Object.keys(reg.dias||{})){
+      const dia = reg.dias[diaStr];
+      const diaNum = parseInt(diaStr,10);
+      const dt = new Date(reg.ano, reg.mes-1, diaNum);
+      const dowCfg = jornada[DOW[dt.getDay()]];
+      const expected = expectedMinutes(dowCfg);
+      totalMin += dayDelta(dia, expected);
+    }
+  }
+  return totalMin;
+}
+function computeFeriasDescontadas(registros, baseEm){
+  const base = baseEm ? new Date(baseEm+"T00:00:00") : null;
+  let dias = 0;
+  for(const reg of registros){
+    for(const diaStr of Object.keys(reg.dias||{})){
+      const dia = reg.dias[diaStr];
+      const diaNum = parseInt(diaStr,10);
+      const dt = new Date(reg.ano, reg.mes-1, diaNum);
+      if(base && dt < base) continue;
+      dias += diaDescontaFerias(dia);
+    }
+  }
+  return dias;
+}
+
+/* ---------------- render ---------------- */
+const appEl = document.getElementById("app");
+
+function render(){
+  if(state.screen === "boot"){
+    appEl.innerHTML = `<div class="loading">Carregando…</div>`;
+    return;
+  }
+  if(state.screen === "login"){
+    appEl.innerHTML = `
+    <div id="loginScreen">
+      <form id="loginForm">
+        <h1>🕒 Banco de Horas</h1>
+        <div class="sub">Contabilidade Cricon</div>
+        <div>
+          <label for="loginEmail">E-mail</label>
+          <input type="email" id="loginEmail" autocomplete="username" required>
+        </div>
+        <div>
+          <label for="loginPassword">Senha</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" required>
+        </div>
+        <div id="loginError"></div>
+        <button type="submit" id="loginSubmit">Entrar</button>
+        <div class="sub">Use o mesmo e-mail/senha do Hub de Ferramentas.</div>
+      </form>
+    </div>`;
+    document.getElementById("loginForm").addEventListener("submit", handleLogin);
+    return;
+  }
+
+  // app
+  const email = state.user.email;
+  const viewEmail = state.viewEmail || email;
+  const viewingOther = viewEmail.toLowerCase() !== email.toLowerCase();
+
+  let html = `
+  <div class="topbar">
+    <div>
+      <h1>🕒 Banco de Horas</h1>
+      <div class="sub">Contabilidade Cricon</div>
+    </div>
+    <div class="userbar">
+      ${state.isAdmin ? `<span class="badge-admin">admin</span>` : ``}
+      <span>${email}</span>
+      <button id="btnLogout">Sair</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab ${state.tab==='meuponto'?'active':''}" data-tab="meuponto">📅 ${viewingOther ? 'Ponto de '+ (state.funcDoc?.nome||viewEmail) : 'Meu Ponto'}</div>
+    <div class="tab ${state.tab==='ferias'?'active':''}" data-tab="ferias">🏖️ Férias</div>
+    ${state.isAdmin ? `<div class="tab ${state.tab==='funcionarios'?'active':''}" data-tab="funcionarios">👥 Funcionários</div>` : ``}
+  </div>
+  <main>`;
+
+  if(viewingOther){
+    html += `<div class="card" style="padding:10px 16px;display:flex;align-items:center;gap:10px;">
+      <span>Visualizando/editando como administrador: <b>${state.funcDoc?.nome||''}</b> (${viewEmail})</span>
+      <button class="btn ghost" id="btnVoltarMeu" style="margin-left:auto;">Voltar ao meu ponto</button>
+    </div>`;
+  }
+
+  if(state.tab === "meuponto"){
+    html += renderMeuPonto();
+  } else if(state.tab === "ferias"){
+    html += renderFerias();
+  } else if(state.tab === "funcionarios"){
+    html += renderFuncionarios();
+  }
+
+  html += `</main>`;
+  appEl.innerHTML = html;
+  bindAppEvents();
+}
+
+function renderMeuPonto(){
+  if(!state.regDoc || state.loadingReg){
+    return `<div class="loading">Carregando ponto…</div>`;
+  }
+  const { ano, mes } = state.cur;
+  const nDias = daysInMonth(ano, mes);
+  const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
+  const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const today = todayYMD();
+
+  let totalMin = 0;
+  let rows = "";
+  for(let d=1; d<=nDias; d++){
+    const dt = new Date(ano, mes-1, d);
+    const dow = dt.getDay();
+    const dia = state.regDoc.dias[d] || {};
+    const cfg = jornada[DOW[dow]];
+    const expected = expectedMinutes(cfg);
+    const delta = dayDelta(dia, expected);
+    totalMin += delta;
+    const worked = workedMinutes(dia);
+    const isWeekend = dow===0 || dow===6;
+    const isToday = today.ano===ano && today.mes===mes && today.dia===d;
+    rows += `<tr class="${isWeekend?'weekend':''} ${isToday?'today':''}">
+      <td>${d}</td>
+      <td>${DOW_LABEL[dow]}</td>
+      <td>
+        <select class="occ" data-day="${d}" data-field="ocorrencia">
+          ${Object.entries(OCC_LABEL).map(([k,l])=>`<option value="${k}" ${dia.ocorrencia===k?'selected':''}>${l}</option>`).join("")}
+        </select>
+      </td>
+      <td><input class="timecell" type="text" placeholder="--:--" value="${dia.ent1||''}" data-day="${d}" data-field="ent1"></td>
+      <td><input class="timecell" type="text" placeholder="--:--" value="${dia.sai1||''}" data-day="${d}" data-field="sai1"></td>
+      <td><input class="timecell" type="text" placeholder="--:--" value="${dia.ent2||''}" data-day="${d}" data-field="ent2"></td>
+      <td><input class="timecell" type="text" placeholder="--:--" value="${dia.sai2||''}" data-day="${d}" data-field="sai2"></td>
+      ${state.show3 ? `
+      <td><input class="timecell" type="text" placeholder="--:--" value="${dia.ent3||''}" data-day="${d}" data-field="ent3"></td>
+      <td><input class="timecell" type="text" placeholder="--:--" value="${dia.sai3||''}" data-day="${d}" data-field="sai3"></td>
+      ` : ``}
+      <td>${fmtMin(worked)}</td>
+      <td>${fmtMin(expected)}</td>
+      <td class="saldo ${delta>0?'pos':(delta<0?'neg':'')}">${fmtMin(delta, true)}</td>
+    </tr>`;
+  }
+
+  const jornadaRows = DOW.map((k,i) => {
+    const cfg = jornada[k] || { ativo:false };
+    return `<div class="dname">${DOW_LABEL[i]}</div>
+      <div><input type="checkbox" data-jdow="${k}" data-jfield="ativo" ${cfg.ativo?'checked':''}></div>
+      <div><input class="timecell" style="width:56px" type="text" placeholder="--:--" data-jdow="${k}" data-jfield="ent1" value="${cfg.ent1||''}"> – <input class="timecell" style="width:56px" type="text" placeholder="--:--" data-jdow="${k}" data-jfield="sai1" value="${cfg.sai1||''}"></div>
+      <div><input class="timecell" style="width:56px" type="text" placeholder="--:--" data-jdow="${k}" data-jfield="ent2" value="${cfg.ent2||''}"> – <input class="timecell" style="width:56px" type="text" placeholder="--:--" data-jdow="${k}" data-jfield="sai2" value="${cfg.sai2||''}"></div>`;
+  }).join("");
+
+  return `
+  <details class="card">
+    <summary style="cursor:pointer;font-weight:600;">⚙️ Jornada de trabalho (horário esperado por dia da semana)</summary>
+    <div class="jornada-grid" style="margin-top:12px;">
+      <div></div><div>Ativo</div><div>1º turno</div><div>2º turno</div>
+      ${jornadaRows}
+    </div>
+    <button class="btn" id="btnSalvarJornada" style="margin-top:12px;">Salvar jornada</button>
+  </details>
+  <div class="card">
+    <div class="month-nav">
+      <button id="btnPrevMonth">←</button>
+      <div class="label">${monthNames[mes-1]} de ${ano}</div>
+      <button id="btnNextMonth">→</button>
+      <span class="savehint">${state.saveStatus}</span>
+    </div>
+    <label class="toggle3">
+      <input type="checkbox" id="chkShow3" ${state.show3?'checked':''}>
+      Mostrar 3º par de entrada/saída (para quem sai e volta mais de uma vez no dia)
+    </label>
+    <div style="overflow-x:auto;">
+    <table>
+      <thead><tr>
+        <th>Dia</th><th>Sem.</th><th>Ocorrência</th>
+        <th>Ent.1</th><th>Saí.1</th><th>Ent.2</th><th>Saí.2</th>
+        ${state.show3 ? `<th>Ent.3</th><th>Saí.3</th>` : ``}
+        <th>Trabalhado</th><th>Esperado</th><th>Saldo dia</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>
+    <div class="legend">
+      Ocorrências: <b>Falta</b> = desconta o dia do banco de horas e 1 dia da férias a vencer.
+      <b>Férias</b> = desconta 1 dia da férias a vencer, sem afetar o banco de horas.
+      <b>Folga (compensação)</b> = usa horas do banco para cobrir o dia, sem afetar as férias.
+      <b>Feriado</b> = neutro, não afeta nada.
+    </div>
+  </div>
+  <div class="row">
+    <div class="stat">
+      <div class="label">Saldo do mês</div>
+      <div class="value ${totalMin>0?'pos':(totalMin<0?'neg':'')}">${fmtMin(totalMin, true)}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Saldo total do banco de horas</div>
+      <div class="value" id="statSaldoTotal">…</div>
+    </div>
+  </div>`;
+}
+
+function renderFerias(){
+  const f = state.funcDoc || {};
+  const canEditBase = state.isAdmin;
+  return `
+  <div class="card">
+    <h2>Férias — ${f.nome||''}</h2>
+    <div class="row" style="margin-bottom:16px;">
+      <div class="stat">
+        <div class="label">Saldo base (dias)</div>
+        <div class="value">
+          ${canEditBase
+            ? `<input class="timecell" style="width:70px;" id="inpFeriasBase" type="number" min="0" value="${f.feriasSaldoBase ?? 30}">`
+            : (f.feriasSaldoBase ?? 30)}
+        </div>
+      </div>
+      <div class="stat">
+        <div class="label">Contando a partir de</div>
+        <div class="value" style="font-size:1rem;">
+          ${canEditBase
+            ? `<input class="timecell" style="width:130px;" id="inpFeriasData" type="date" value="${f.feriasBaseEm || ''}">`
+            : (f.feriasBaseEm || '—')}
+        </div>
+      </div>
+      <div class="stat">
+        <div class="label">Dias descontados (faltas + férias)</div>
+        <div class="value" id="statFeriasDescontadas">…</div>
+      </div>
+      <div class="stat">
+        <div class="label">Férias a vencer (saldo atual)</div>
+        <div class="value" id="statFeriasAtual">…</div>
+      </div>
+    </div>
+    ${canEditBase ? `<button class="btn" id="btnSalvarFerias">Salvar saldo base</button>` : ``}
+    <div class="legend">
+      Os dias marcados como <b>Falta</b> ou <b>Férias</b> no calendário de ponto (aba "Meu Ponto") a partir da data acima são descontados automaticamente do saldo de férias a vencer.
+    </div>
+  </div>`;
+}
+
+function renderFuncionarios(){
+  if(state.loadingFunc) return `<div class="loading">Carregando funcionários…</div>`;
+  let rows = state.funcList.map(f => `
+    <div class="funcrow">
+      <div class="name">${f.nome}</div>
+      <div class="email">${f.email}</div>
+      <button data-view="${f.email}">Ver / editar ponto</button>
+    </div>
+  `).join("");
+  if(!rows) rows = `<div class="sub">Nenhum funcionário cadastrado ainda (aparece automaticamente no primeiro acesso de cada pessoa).</div>`;
+  return `
+  <div class="card">
+    <h2>Funcionários</h2>
+    <div class="funclist">${rows}</div>
+  </div>
+  <div class="card">
+    <h2>Resumo geral</h2>
+    <button class="btn" id="btnResumoPdf">Gerar resumo em PDF (todos os funcionários)</button>
+    <div class="sub" style="margin-top:8px;">Abre a janela de impressão do navegador — escolha "Salvar como PDF".</div>
+  </div>`;
+}
+
+/* ---------------- events ---------------- */
+function bindAppEvents(){
+  const q = sel => appEl.querySelector(sel);
+  const qa = sel => appEl.querySelectorAll(sel);
+
+  appEl.querySelectorAll(".tab").forEach(el => {
+    el.addEventListener("click", () => { state.tab = el.dataset.tab; onTabChange(); });
+  });
+  if(q("#btnLogout")) q("#btnLogout").addEventListener("click", () => signOut(auth));
+  if(q("#btnVoltarMeu")) q("#btnVoltarMeu").addEventListener("click", () => {
+    state.viewEmail = null;
+    loadForCurrentView().then(render);
+  });
+
+  if(q("#btnPrevMonth")) q("#btnPrevMonth").addEventListener("click", () => changeMonth(-1));
+  if(q("#btnNextMonth")) q("#btnNextMonth").addEventListener("click", () => changeMonth(1));
+  if(q("#chkShow3")) q("#chkShow3").addEventListener("change", e => { state.show3 = e.target.checked; render(); });
+
+  qa("input.timecell[data-day], select.occ[data-day]").forEach(el => {
+    el.addEventListener("change", onDayFieldChange);
+  });
+
+  if(q("#btnSalvarFerias")) q("#btnSalvarFerias").addEventListener("click", onSalvarFerias);
+  if(q("#btnSalvarJornada")) q("#btnSalvarJornada").addEventListener("click", onSalvarJornada);
+  if(q("#btnResumoPdf")) q("#btnResumoPdf").addEventListener("click", gerarResumoPdf);
+  qa("[data-view]").forEach(el => el.addEventListener("click", () => {
+    state.viewEmail = el.dataset.view;
+    state.tab = "meuponto";
+    loadForCurrentView().then(render);
+  }));
+
+  if(state.tab === "meuponto") refreshSaldoTotal();
+  if(state.tab === "ferias") refreshFerias();
+}
+
+function onTabChange(){
+  if(state.tab === "funcionarios" && state.funcList.length === 0){
+    state.loadingFunc = true;
+    render();
+    loadAllFuncionarios().then(list => { state.funcList = list; state.loadingFunc = false; render(); });
+    return;
+  }
+  render();
+}
+
+async function changeMonth(delta){
+  let { ano, mes } = state.cur;
+  mes += delta;
+  if(mes < 1){ mes = 12; ano--; }
+  if(mes > 12){ mes = 1; ano++; }
+  state.cur = { ano, mes, dia: 1 };
+  state.loadingReg = true;
+  render();
+  const email = state.viewEmail || state.user.email;
+  state.regDoc = await loadRegistro(email, ano, mes);
+  state.loadingReg = false;
+  render();
+}
+
+function onDayFieldChange(e){
+  const day = e.target.dataset.day;
+  const field = e.target.dataset.field;
+  let value = e.target.value;
+  if(field !== "ocorrencia" && value){
+    value = value.trim();
+    const m = /^(\d{1,2})[:.hH]?(\d{2})?$/.exec(value);
+    if(m){ value = `${m[1].padStart(2,"0")}:${(m[2]||"00").padStart(2,"0")}`; e.target.value = value; }
+  }
+  if(!state.regDoc.dias[day]) state.regDoc.dias[day] = {};
+  state.regDoc.dias[day][field] = value;
+  scheduleSave();
+  // re-render just the affected row's computed cells without losing focus: simplest is full re-render on blur-safe fields
+  renderRowComputed(day);
+}
+
+function renderRowComputed(day){
+  const { ano, mes } = state.cur;
+  const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
+  const dt = new Date(ano, mes-1, parseInt(day,10));
+  const cfg = jornada[DOW[dt.getDay()]];
+  const expected = expectedMinutes(cfg);
+  const dia = state.regDoc.dias[day] || {};
+  const worked = workedMinutes(dia);
+  const delta = dayDelta(dia, expected);
+  const row = [...appEl.querySelectorAll("tbody tr")].find(tr => tr.firstElementChild.textContent === String(day));
+  if(row){
+    const tds = row.querySelectorAll("td");
+    tds[tds.length-3].textContent = fmtMin(worked);
+    tds[tds.length-2].textContent = fmtMin(expected);
+    const saldoTd = tds[tds.length-1];
+    saldoTd.textContent = fmtMin(delta, true);
+    saldoTd.className = "saldo " + (delta>0?"pos":(delta<0?"neg":""));
+  }
+  refreshSaldoTotal();
+}
+
+function scheduleSave(){
+  state.saveStatus = "Salvando…";
+  const hint = appEl.querySelector(".savehint");
+  if(hint) hint.textContent = state.saveStatus;
+  if(state.saveTimer) clearTimeout(state.saveTimer);
+  state.saveTimer = setTimeout(async () => {
+    await saveRegistro(state.regDoc);
+    state.saveStatus = "Salvo ✓";
+    const hint2 = appEl.querySelector(".savehint");
+    if(hint2) hint2.textContent = state.saveStatus;
+  }, 700);
+}
+
+async function refreshSaldoTotal(){
+  const el = document.getElementById("statSaldoTotal");
+  if(!el) return;
+  const email = state.viewEmail || state.user.email;
+  const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
+  const registros = await loadAllRegistros(email);
+  const total = computeSaldoBanco(registros, jornada);
+  const el2 = document.getElementById("statSaldoTotal");
+  if(!el2) return;
+  el2.textContent = fmtMin(total, true);
+  el2.className = "value " + (total>0?"pos":(total<0?"neg":""));
+}
+
+async function refreshFerias(){
+  const email = state.viewEmail || state.user.email;
+  const registros = await loadAllRegistros(email);
+  const descontadas = computeFeriasDescontadas(registros, state.funcDoc.feriasBaseEm);
+  const base = state.funcDoc.feriasSaldoBase ?? 30;
+  const atual = base - descontadas;
+  const elD = document.getElementById("statFeriasDescontadas");
+  const elA = document.getElementById("statFeriasAtual");
+  if(elD) elD.textContent = descontadas;
+  if(elA){ elA.textContent = atual; elA.className = "value " + (atual<0?"neg":"pos"); }
+}
+
+async function onSalvarFerias(){
+  const base = parseFloat(document.getElementById("inpFeriasBase").value || "0");
+  const data = document.getElementById("inpFeriasData").value;
+  state.funcDoc.feriasSaldoBase = base;
+  state.funcDoc.feriasBaseEm = data;
+  await saveFuncDoc(state.funcDoc);
+  refreshFerias();
+}
+
+async function onSalvarJornada(){
+  const jornada = {};
+  DOW.forEach(k => {
+    const ativoEl = appEl.querySelector(`[data-jdow="${k}"][data-jfield="ativo"]`);
+    const ativo = ativoEl ? ativoEl.checked : false;
+    const get = f => {
+      const el = appEl.querySelector(`[data-jdow="${k}"][data-jfield="${f}"]`);
+      return el ? el.value.trim() : "";
+    };
+    jornada[k] = ativo ? { ativo:true, ent1:get("ent1"), sai1:get("sai1"), ent2:get("ent2"), sai2:get("sai2") } : { ativo:false };
+  });
+  state.funcDoc.jornada = jornada;
+  await saveFuncDoc(state.funcDoc);
+  render();
+  refreshSaldoTotal();
+}
+
+async function gerarResumoPdf(){
+  const printArea = document.getElementById("printArea");
+  printArea.innerHTML = `<div class="loading">Gerando…</div>`;
+  let rowsHtml = "";
+  for(const f of state.funcList){
+    const registros = await loadAllRegistros(f.email);
+    const jornada = f.jornada || JORNADA_PADRAO;
+    const saldoBanco = computeSaldoBanco(registros, jornada);
+    const descontadas = computeFeriasDescontadas(registros, f.feriasBaseEm);
+    const feriasAtual = (f.feriasSaldoBase ?? 30) - descontadas;
+    rowsHtml += `<tr>
+      <td>${f.nome}</td><td>${f.email}</td>
+      <td>${fmtMin(saldoBanco, true)}</td>
+      <td>${feriasAtual} dias</td>
+    </tr>`;
+  }
+  printArea.innerHTML = `
+    <h1>Resumo do Banco de Horas e Férias</h1>
+    <h2>Contabilidade Cricon — gerado em ${new Date().toLocaleString("pt-BR")}</h2>
+    <table>
+      <thead><tr><th>Funcionário</th><th>E-mail</th><th>Saldo banco de horas</th><th>Férias a vencer</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+  window.print();
+}
+
+/* ---------------- load / boot ---------------- */
+async function loadForCurrentView(){
+  const email = state.viewEmail || state.user.email;
+  state.loadingReg = true;
+  state.funcDoc = await ensureFuncDoc(email);
+  const { ano, mes } = state.cur;
+  state.regDoc = await loadRegistro(email, ano, mes);
+  state.loadingReg = false;
+}
+
+async function handleLogin(e){
+  e.preventDefault();
+  const errEl = document.getElementById("loginError");
+  const btn = document.getElementById("loginSubmit");
+  errEl.textContent = "";
+  btn.disabled = true; btn.textContent = "Entrando…";
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+  try{
+    await setPersistence(auth, browserLocalPersistence);
+    await signInWithEmailAndPassword(auth, email, password);
+  }catch(err){
+    errEl.textContent = "E-mail ou senha inválidos.";
+  }
+  btn.disabled = false; btn.textContent = "Entrar";
+}
+
+onAuthStateChanged(auth, async (user) => {
+  if(user){
+    state.user = user;
+    state.isAdmin = isAdminEmail(user.email);
+    state.screen = "app";
+    await loadForCurrentView();
+    render();
+  } else {
+    state.user = null;
+    state.screen = "login";
+    render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
