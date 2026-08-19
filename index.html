@@ -222,7 +222,7 @@ function expectedMinutes(dayCfg){
 function workedMinutes(dia){
   if(!dia) return 0;
   let total = 0;
-  for(const p of [["ent1","sai1"],["ent2","sai2"],["ent3","sai3"]]){
+  for(const p of [["ent1","sai1"],["ent2","sai2"],["ent3","sai3"],["ent4","sai4"]]){
     const a = parseHM(dia[p[0]]), b = parseHM(dia[p[1]]);
     if(a!=null && b!=null && b>a) total += (b-a);
   }
@@ -465,6 +465,8 @@ function renderMeuPonto(){
       ${state.show3 ? `
       <td><input class="timecell" type="text" placeholder="--:--" value="${dia.ent3||''}" data-day="${d}" data-field="ent3"></td>
       <td><input class="timecell" type="text" placeholder="--:--" value="${dia.sai3||''}" data-day="${d}" data-field="sai3"></td>
+      <td><input class="timecell" type="text" placeholder="--:--" value="${dia.ent4||''}" data-day="${d}" data-field="ent4"></td>
+      <td><input class="timecell" type="text" placeholder="--:--" value="${dia.sai4||''}" data-day="${d}" data-field="sai4"></td>
       ` : ``}
       <td>${fmtMin(worked)}</td>
       <td>${fmtMin(expected)}</td>
@@ -498,14 +500,14 @@ function renderMeuPonto(){
     </div>
     <label class="toggle3">
       <input type="checkbox" id="chkShow3" ${state.show3?'checked':''}>
-      Mostrar 3º par de entrada/saída (para quem sai e volta mais de uma vez no dia)
+      Mostrar 3º e 4º par de entrada/saída (para quem sai e volta mais de uma vez no dia)
     </label>
     <div style="overflow-x:auto;">
     <table>
       <thead><tr>
         <th>Dia</th><th>Sem.</th><th>Ocorrência</th>
         <th>Ent.1</th><th>Saí.1</th><th>Ent.2</th><th>Saí.2</th>
-        ${state.show3 ? `<th>Ent.3</th><th>Saí.3</th>` : ``}
+        ${state.show3 ? `<th>Ent.3</th><th>Saí.3</th><th>Ent.4</th><th>Saí.4</th>` : ``}
         <th>Trabalhado</th><th>Esperado</th><th>Saldo dia</th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -809,7 +811,7 @@ async function handleLogin(e){
 /* ---------------- navegação por teclado (estilo Excel) ---------------- */
 function gridColumns(){
   return state.show3
-    ? ["ocorrencia","ent1","sai1","ent2","sai2","ent3","sai3"]
+    ? ["ocorrencia","ent1","sai1","ent2","sai2","ent3","sai3","ent4","sai4"]
     : ["ocorrencia","ent1","sai1","ent2","sai2"];
 }
 function focusGridCell(day, colIdx){
