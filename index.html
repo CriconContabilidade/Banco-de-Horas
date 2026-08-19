@@ -266,6 +266,7 @@ let state = {
   funcDoc: null,
   regDoc: null,
   show3: false,
+  show4: false,
   funcList: [],
   loadingReg: false,
   saveTimer: null,
@@ -472,6 +473,8 @@ function renderMeuPonto(){
       ${state.show3 ? `
       <td><input class="timecell" type="text" placeholder="--:--" value="${dia.ent3||''}" data-day="${d}" data-field="ent3"></td>
       <td><input class="timecell" type="text" placeholder="--:--" value="${dia.sai3||''}" data-day="${d}" data-field="sai3"></td>
+      ` : ``}
+      ${state.show4 ? `
       <td><input class="timecell" type="text" placeholder="--:--" value="${dia.ent4||''}" data-day="${d}" data-field="ent4"></td>
       <td><input class="timecell" type="text" placeholder="--:--" value="${dia.sai4||''}" data-day="${d}" data-field="sai4"></td>
       ` : ``}
@@ -507,14 +510,19 @@ function renderMeuPonto(){
     </div>
     <label class="toggle3">
       <input type="checkbox" id="chkShow3" ${state.show3?'checked':''}>
-      Mostrar 3º e 4º par de entrada/saída (para quem sai e volta mais de uma vez no dia)
+      Mostrar 3º par de entrada/saída (para quem sai e volta mais de uma vez no dia)
+    </label>
+    <label class="toggle3">
+      <input type="checkbox" id="chkShow4" ${state.show4?'checked':''}>
+      Mostrar 4º par de entrada/saída (bem raro)
     </label>
     <div style="overflow-x:auto;">
     <table>
       <thead><tr>
         <th>Dia</th><th>Sem.</th><th>Ocorrência</th>
         <th>Ent.1</th><th>Saí.1</th><th>Ent.2</th><th>Saí.2</th>
-        ${state.show3 ? `<th>Ent.3</th><th>Saí.3</th><th>Ent.4</th><th>Saí.4</th>` : ``}
+        ${state.show3 ? `<th>Ent.3</th><th>Saí.3</th>` : ``}
+        ${state.show4 ? `<th>Ent.4</th><th>Saí.4</th>` : ``}
         <th>Trabalhado</th><th>Esperado</th><th>Saldo dia</th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -619,6 +627,7 @@ function bindAppEvents(){
   if(q("#btnPrevMonth")) q("#btnPrevMonth").addEventListener("click", () => changeMonth(-1));
   if(q("#btnNextMonth")) q("#btnNextMonth").addEventListener("click", () => changeMonth(1));
   if(q("#chkShow3")) q("#chkShow3").addEventListener("change", e => { state.show3 = e.target.checked; render(); });
+  if(q("#chkShow4")) q("#chkShow4").addEventListener("change", e => { state.show4 = e.target.checked; render(); });
 
   qa("input.timecell[data-day], select.occ[data-day]").forEach(el => {
     el.addEventListener("change", onDayFieldChange);
@@ -816,9 +825,10 @@ async function handleLogin(e){
 
 /* ---------------- navegação por teclado (estilo Excel) ---------------- */
 function gridColumns(){
-  return state.show3
-    ? ["ocorrencia","ent1","sai1","ent2","sai2","ent3","sai3","ent4","sai4"]
-    : ["ocorrencia","ent1","sai1","ent2","sai2"];
+  const cols = ["ocorrencia","ent1","sai1","ent2","sai2"];
+  if(state.show3) cols.push("ent3","sai3");
+  if(state.show4) cols.push("ent4","sai4");
+  return cols;
 }
 function focusGridCell(day, colIdx){
   const cols = gridColumns();
