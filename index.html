@@ -799,6 +799,61 @@ async function handleLogin(e){
   btn.disabled = false; btn.textContent = "Entrar";
 }
 
+/* ---------------- navegação por teclado (estilo Excel) ---------------- */
+function gridColumns(){
+  return state.show3
+    ? ["ocorrencia","ent1","sai1","ent2","sai2","ent3","sai3"]
+    : ["ocorrencia","ent1","sai1","ent2","sai2"];
+}
+function focusGridCell(day, colIdx){
+  const cols = gridColumns();
+  const nDias = daysInMonth(state.cur.ano, state.cur.mes);
+  if(day < 1 || day > nDias || colIdx < 0 || colIdx >= cols.length) return false;
+  const field = cols[colIdx];
+  const sel = field === "ocorrencia"
+    ? `select.occ[data-day="${day}"]`
+    : `input.timecell[data-day="${day}"][data-field="${field}"]`;
+  const target = appEl.querySelector(sel);
+  if(!target) return false;
+  target.focus();
+  if(typeof target.select === "function") target.select();
+  return true;
+}
+function onGridKeydown(e){
+  const el = e.target;
+  if(!el.dataset || el.dataset.day === undefined) return;
+  const day = parseInt(el.dataset.day, 10);
+  const field = el.dataset.field;
+  const cols = gridColumns();
+  const colIdx = cols.indexOf(field);
+  if(colIdx === -1) return;
+  const isSelect = el.tagName === "SELECT";
+  if(e.key === "Enter"){
+    e.preventDefault();
+    focusGridCell(day+1, colIdx);
+  } else if(e.key === "ArrowDown"){
+    e.preventDefault();
+    focusGridCell(day+1, colIdx);
+  } else if(e.key === "ArrowUp"){
+    e.preventDefault();
+    focusGridCell(day-1, colIdx);
+  } else if(e.key === "ArrowRight"){
+    if(isSelect || (el.selectionStart === el.value.length && el.selectionEnd === el.value.length)){
+      e.preventDefault();
+      focusGridCell(day, colIdx+1);
+    }
+  } else if(e.key === "ArrowLeft"){
+    if(isSelect || (el.selectionStart === 0 && el.selectionEnd === 0)){
+      e.preventDefault();
+      focusGridCell(day, colIdx-1);
+    }
+  }
+}
+appEl.addEventListener("keydown", onGridKeydown);
+appEl.addEventListener("focusin", e => {
+  if(e.target.classList && e.target.classList.contains("timecell")) e.target.select();
+});
+
 onAuthStateChanged(auth, async (user) => {
   if(user){
     state.user = user;
