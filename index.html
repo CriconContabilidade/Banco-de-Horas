@@ -331,19 +331,21 @@ async function loadAllRegistros(email){
   return list;
 }
 
-function computeSaldoBanco(registros, jornada){
-  let totalMin = 0;
-  for(const reg of registros){
-    for(const diaStr of Object.keys(reg.dias||{})){
-      const dia = reg.dias[diaStr];
-      const diaNum = parseInt(diaStr,10);
-      const dt = new Date(reg.ano, reg.mes-1, diaNum);
-      const dowCfg = jornada[DOW[dt.getDay()]];
-      const expected = expectedMinutes(dowCfg);
-      totalMin += dayDelta(dia, expected);
-    }
+function computeRegDocDelta(regDoc, jornada){
+  if(!regDoc) return 0;
+  let total = 0;
+  const nDias = daysInMonth(regDoc.ano, regDoc.mes);
+  for(let d=1; d<=nDias; d++){
+    const dt = new Date(regDoc.ano, regDoc.mes-1, d);
+    const cfg = jornada[DOW[dt.getDay()]];
+    const expected = expectedMinutes(cfg);
+    const dia = (regDoc.dias && regDoc.dias[d]) || {};
+    total += dayDelta(dia, expected);
   }
-  return totalMin;
+  return total;
+}
+function computeSaldoBanco(registros, jornada){
+  return registros.reduce((sum, reg) => sum + computeRegDocDelta(reg, jornada), 0);
 }
 function computeFeriasDescontadas(registros, baseEm){
   const base = baseEm ? new Date(baseEm+"T00:00:00") : null;
@@ -539,11 +541,15 @@ function renderMeuPonto(){
   </div>
   <div class="row">
     <div class="stat">
-      <div class="label">Saldo do mês</div>
+      <div class="label">Saldo até o mês anterior</div>
+      <div class="value" id="statSaldoAnterior">…</div>
+    </div>
+    <div class="stat">
+      <div class="label">Saldo deste mês</div>
       <div class="value ${totalMin>0?'pos':(totalMin<0?'neg':'')}">${fmtMin(totalMin, true)}</div>
     </div>
     <div class="stat">
-      <div class="label">Saldo total do banco de horas</div>
+      <div class="label">Saldo final do banco de horas</div>
       <div class="value" id="statSaldoTotal">…</div>
     </div>
   </div>`;
@@ -712,24 +718,32 @@ function scheduleSave(){
   if(hint) hint.textContent = state.saveStatus;
   if(state.saveTimer) clearTimeout(state.saveTimer);
   state.saveTimer = setTimeout(async () => {
-    await saveRegistro(state.regDoc);
-    state.saveStatus = "Salvo ✓";
+    try{
+      await saveRegistro(state.regDoc);
+      state.saveStatus = "Salvo ✓";
+    }catch(err){
+      console.error("Erro ao salvar ponto:", err);
+      state.saveStatus = "⚠️ Erro ao salvar! Verifique sua conexão e tente de novo.";
+    }
     const hint2 = appEl.querySelector(".savehint");
     if(hint2) hint2.textContent = state.saveStatus;
   }, 700);
 }
 
 async function refreshSaldoTotal(){
-  const el = document.getElementById("statSaldoTotal");
-  if(!el) return;
+  if(!document.getElementById("statSaldoTotal") && !document.getElementById("statSaldoAnterior")) return;
   const email = state.viewEmail || state.user.email;
   const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
+  const { ano, mes } = state.cur;
   const registros = await loadAllRegistros(email);
-  const total = computeSaldoBanco(registros, jornada);
-  const el2 = document.getElementById("statSaldoTotal");
-  if(!el2) return;
-  el2.textContent = fmtMin(total, true);
-  el2.className = "value " + (total>0?"pos":(total<0?"neg":""));
+  const outros = registros.filter(r => !(r.ano === ano && r.mes === mes));
+  const saldoAnterior = computeSaldoBanco(outros, jornada);
+  const saldoMes = computeRegDocDelta(state.regDoc, jornada);
+  const saldoFinal = saldoAnterior + saldoMes;
+  const elA = document.getElementById("statSaldoAnterior");
+  const elT = document.getElementById("statSaldoTotal");
+  if(elA){ elA.textContent = fmtMin(saldoAnterior, true); elA.className = "value " + (saldoAnterior>0?"pos":(saldoAnterior<0?"neg":"")); }
+  if(elT){ elT.textContent = fmtMin(saldoFinal, true); elT.className = "value " + (saldoFinal>0?"pos":(saldoFinal<0?"neg":"")); }
 }
 
 async function refreshFerias(){
