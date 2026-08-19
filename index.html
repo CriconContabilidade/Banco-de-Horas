@@ -195,6 +195,13 @@ function emailKey(email){
 function isAdminEmail(email){
   return ADMIN_EMAILS.includes((email||"").trim().toLowerCase());
 }
+function normalizeTimeStr(value){
+  if(!value) return "";
+  value = value.trim();
+  const m = /^(\d{1,2})[:.,hH]?(\d{2})?$/.exec(value);
+  if(!m) return value;
+  return `${m[1].padStart(2,"0")}:${(m[2]||"00").padStart(2,"0")}`;
+}
 function parseHM(str){
   if(!str) return null;
   const m = /^(\d{1,2}):(\d{2})$/.exec(str.trim());
@@ -659,9 +666,8 @@ function onDayFieldChange(e){
   const field = e.target.dataset.field;
   let value = e.target.value;
   if(field !== "ocorrencia" && value){
-    value = value.trim();
-    const m = /^(\d{1,2})[:.hH]?(\d{2})?$/.exec(value);
-    if(m){ value = `${m[1].padStart(2,"0")}:${(m[2]||"00").padStart(2,"0")}`; e.target.value = value; }
+    value = normalizeTimeStr(value);
+    e.target.value = value;
   }
   if(!state.regDoc.dias[day]) state.regDoc.dias[day] = {};
   state.regDoc.dias[day][field] = value;
@@ -745,7 +751,7 @@ async function onSalvarJornada(){
     const ativo = ativoEl ? ativoEl.checked : false;
     const get = f => {
       const el = appEl.querySelector(`[data-jdow="${k}"][data-jfield="${f}"]`);
-      return el ? el.value.trim() : "";
+      return el ? normalizeTimeStr(el.value) : "";
     };
     jornada[k] = ativo ? { ativo:true, ent1:get("ent1"), sai1:get("sai1"), ent2:get("ent2"), sai2:get("sai2") } : { ativo:false };
   });
