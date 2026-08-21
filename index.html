@@ -438,6 +438,9 @@ function render(){
 }
 
 function renderMeuPonto(){
+  if(state.loadError){
+    return `<div class="card"><div class="loading" style="color:var(--red);">${state.loadError}</div></div>`;
+  }
   if(!state.regDoc || state.loadingReg){
     return `<div class="loading">Carregando ponto…</div>`;
   }
@@ -814,10 +817,17 @@ async function gerarResumoPdf(){
 async function loadForCurrentView(){
   const email = state.viewEmail || state.user.email;
   state.loadingReg = true;
-  state.funcDoc = await ensureFuncDoc(email);
-  const { ano, mes } = state.cur;
-  state.regDoc = await loadRegistro(email, ano, mes);
-  state.loadingReg = false;
+  state.loadError = null;
+  try{
+    state.funcDoc = await ensureFuncDoc(email);
+    const { ano, mes } = state.cur;
+    state.regDoc = await loadRegistro(email, ano, mes);
+  }catch(err){
+    console.error("Erro ao carregar ponto:", err);
+    state.loadError = "Não foi possível carregar. Verifique sua conexão ou as permissões no Firestore. (" + (err && err.message || err) + ")";
+  }finally{
+    state.loadingReg = false;
+  }
 }
 
 async function handleLogin(e){
