@@ -137,7 +137,9 @@
     #printArea h2 { font-size:12.5px; font-weight:500; color:#555; margin:0 0 14px; }
     #printArea table { width:100%; border-collapse:collapse; font-size:11px; }
     #printArea th, #printArea td { border:1px solid #999; padding:6px 8px; text-align:left; color:#000; }
-    #printArea th { background:#eee; }
+    #printArea th { background:#fff; font-weight:700; }
+    #printArea .assinatura { margin-top:70px; display:flex; justify-content:space-between; font-size:12px; }
+    #printArea .assinatura div { border-top:1px solid #000; padding-top:4px; width:45%; }
   }
 
   .loading { text-align:center; padding:60px; color:var(--text-dim); }
@@ -511,6 +513,7 @@ function renderMeuPonto(){
       <button id="btnPrevMonth">←</button>
       <div class="label">${monthNames[mes-1]} de ${ano}</div>
       <button id="btnNextMonth">→</button>
+      <button class="btn ghost" id="btnImprimirPonto" style="margin-left:auto;">🖨️ Imprimir para assinar</button>
       <span class="savehint">${state.saveStatus}</span>
     </div>
     <label class="toggle3">
@@ -645,6 +648,7 @@ function bindAppEvents(){
   if(q("#btnSalvarFerias")) q("#btnSalvarFerias").addEventListener("click", onSalvarFerias);
   if(q("#btnSalvarJornada")) q("#btnSalvarJornada").addEventListener("click", onSalvarJornada);
   if(q("#btnResumoPdf")) q("#btnResumoPdf").addEventListener("click", gerarResumoPdf);
+  if(q("#btnImprimirPonto")) q("#btnImprimirPonto").addEventListener("click", imprimirPonto);
   qa("[data-view]").forEach(el => el.addEventListener("click", () => {
     state.viewEmail = el.dataset.view;
     state.tab = "meuponto";
@@ -785,6 +789,49 @@ async function onSalvarJornada(){
   await saveFuncDoc(state.funcDoc);
   render();
   refreshSaldoTotal();
+}
+
+function imprimirPonto(){
+  const { ano, mes } = state.cur;
+  const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
+  const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const nDias = daysInMonth(ano, mes);
+  let totalMin = 0;
+  let rows = "";
+  for(let d=1; d<=nDias; d++){
+    const dt = new Date(ano, mes-1, d);
+    const dow = dt.getDay();
+    const dia = state.regDoc.dias[d] || {};
+    const cfg = jornada[DOW[dow]];
+    const expected = expectedMinutes(cfg);
+    const delta = dayDelta(dia, expected);
+    totalMin += delta;
+    const worked = workedMinutes(dia);
+    const horarios = [["ent1","sai1"],["ent2","sai2"],["ent3","sai3"],["ent4","sai4"]]
+      .map(([e,s]) => (dia[e] || dia[s]) ? `${dia[e]||"--:--"}-${dia[s]||"--:--"}` : "")
+      .filter(Boolean).join("  ");
+    rows += `<tr>
+      <td>${d}</td><td>${DOW_LABEL[dow]}</td>
+      <td>${OCC_LABEL[dia.ocorrencia || ""]}</td>
+      <td>${horarios}</td>
+      <td>${fmtMin(worked)}</td><td>${fmtMin(expected)}</td><td>${fmtMin(delta, true)}</td>
+    </tr>`;
+  }
+  const printArea = document.getElementById("printArea");
+  printArea.innerHTML = `
+    <h1>Controle de Ponto — ${state.funcDoc.nome || ""}</h1>
+    <h2>${monthNames[mes-1]} de ${ano} — Contabilidade Cricon</h2>
+    <table>
+      <thead><tr><th>Dia</th><th>Sem.</th><th>Ocorrência</th><th>Horários</th><th>Trab.</th><th>Esp.</th><th>Saldo</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin-top:14px;"><b>Saldo do mês:</b> ${fmtMin(totalMin, true)}</p>
+    <div class="assinatura">
+      <div>Assinatura do(a) funcionário(a)</div>
+      <div>Data: ____/____/________</div>
+    </div>
+  `;
+  window.print();
 }
 
 async function gerarResumoPdf(){
