@@ -918,6 +918,28 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 render();
+
+setTimeout(() => {
+  if(state.screen === "boot"){
+    appEl.innerHTML = `
+      <div class="card" style="max-width:480px;margin:60px auto;">
+        <h2>Não foi possível carregar</h2>
+        <p>O sistema de login não respondeu depois de alguns segundos. Isso
+        geralmente é causado por antivírus, firewall ou proxy da rede
+        bloqueando o carregamento de <code>gstatic.com/firebasejs</code>
+        (o banco de dados da ferramenta).</p>
+        <p>Tente, nesta ordem:</p>
+        <ul>
+          <li>Recarregar a página (Ctrl+F5)</li>
+          <li>Testar em outro navegador (Chrome ou Edge atualizados)</li>
+          <li>Testar em outra rede (ex: dados móveis do celular) pra confirmar
+          se é bloqueio da rede local</li>
+        </ul>
+        <p>Se continuar travado, avise o suporte informando o navegador
+        usado e o que aparece ao apertar F12 → aba "Console" nesta tela.</p>
+      </div>`;
+  }
+}, 8000);
 </script>
 </body>
 </html>
