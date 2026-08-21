@@ -740,22 +740,28 @@ function scheduleSave(){
   }, 700);
 }
 
+let saldoRequestSeq = 0;
 async function refreshSaldoTotal(){
   if(!document.getElementById("statSaldoTotal") && !document.getElementById("statSaldoAnterior")) return;
+  const myRequestId = ++saldoRequestSeq;
+  const email = state.viewEmail || state.user.email;
+  const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
+  const { ano, mes } = state.cur;
+  const regDocAtCall = state.regDoc; // captura antes do await: se o usuário
+  // trocar de mês enquanto a busca roda, essa referência não muda sozinha
   try{
-    const email = state.viewEmail || state.user.email;
-    const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
-    const { ano, mes } = state.cur;
     const registros = await loadAllRegistros(email);
+    if(myRequestId !== saldoRequestSeq) return; // uma chamada mais nova já respondeu, descarta esta
     const outros = registros.filter(r => !(r.ano === ano && r.mes === mes));
     const saldoAnterior = computeSaldoBanco(outros, jornada);
-    const saldoMes = computeRegDocDelta(state.regDoc, jornada);
+    const saldoMes = computeRegDocDelta(regDocAtCall, jornada);
     const saldoFinal = saldoAnterior + saldoMes;
     const elA = document.getElementById("statSaldoAnterior");
     const elT = document.getElementById("statSaldoTotal");
     if(elA){ elA.textContent = fmtMin(saldoAnterior, true); elA.className = "value " + (saldoAnterior>0?"pos":(saldoAnterior<0?"neg":"")); }
     if(elT){ elT.textContent = fmtMin(saldoFinal, true); elT.className = "value " + (saldoFinal>0?"pos":(saldoFinal<0?"neg":"")); }
   }catch(err){
+    if(myRequestId !== saldoRequestSeq) return;
     console.error("Erro ao calcular saldo total:", err);
     const msg = "Erro: " + (err && (err.code || err.message) || err);
     const elA = document.getElementById("statSaldoAnterior");
