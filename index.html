@@ -816,9 +816,17 @@ async function imprimirPonto(){
     console.error("Erro ao calcular saldo anterior para impressão:", err);
   }
 
+  const dias = state.regDoc.dias || {};
+  function algumDiaTem(fields){
+    for(let d=1; d<=nDias; d++){
+      const dia = dias[d];
+      if(dia && fields.some(f => dia[f])) return true;
+    }
+    return false;
+  }
   const pares = [["ent1","sai1"],["ent2","sai2"]];
-  if(state.show3) pares.push(["ent3","sai3"]);
-  if(state.show4) pares.push(["ent4","sai4"]);
+  if(algumDiaTem(["ent3","sai3"])) pares.push(["ent3","sai3"]);
+  if(algumDiaTem(["ent4","sai4"])) pares.push(["ent4","sai4"]);
   const nCols = 3 + pares.length*2;
 
   let acumulado = saldoAnterior;
