@@ -130,9 +130,9 @@
 
   #printArea { display:none; }
   @media print {
-    body * { visibility:hidden; }
-    #printArea, #printArea * { visibility:visible; }
-    #printArea { display:block !important; position:absolute; top:0; left:0; width:100%; padding:10px; color:#000; background:#fff; }
+    #app { display:none !important; }
+    body { background:#fff; }
+    #printArea { display:block !important; width:100%; padding:10px; color:#000; background:#fff; }
     #printArea h1 { font-size:18px; margin:0 0 2px; }
     #printArea h2 { font-size:12.5px; font-weight:500; color:#555; margin:0 0 14px; }
     #printArea table { width:100%; border-collapse:collapse; font-size:11px; }
