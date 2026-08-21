@@ -799,13 +799,32 @@ async function onSalvarJornada(){
   refreshSaldoTotal();
 }
 
-function imprimirPonto(){
+async function imprimirPonto(){
   const { ano, mes } = state.cur;
   const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
   const monthNames = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
   const nDias = daysInMonth(ano, mes);
-  let totalMin = 0;
-  let rows = "";
+  const email = state.viewEmail || state.user.email;
+
+  let saldoAnterior = 0;
+  try{
+    const registros = await loadAllRegistros(email);
+    const outros = registros.filter(r => !(r.ano === ano && r.mes === mes));
+    saldoAnterior = computeSaldoBanco(outros, jornada);
+  }catch(err){
+    console.error("Erro ao calcular saldo anterior para impressão:", err);
+  }
+
+  const pares = [["ent1","sai1"],["ent2","sai2"]];
+  if(state.show3) pares.push(["ent3","sai3"]);
+  if(state.show4) pares.push(["ent4","sai4"]);
+  const nCols = 3 + pares.length*2;
+
+  let acumulado = saldoAnterior;
+  let rows = `<tr>
+    <td colspan="${nCols}" style="text-align:right;"><b>Saldo anterior</b></td>
+    <td>—</td><td><b>${fmtMin(saldoAnterior, true)}</b></td>
+  </tr>`;
   for(let d=1; d<=nDias; d++){
     const dt = new Date(ano, mes-1, d);
     const dow = dt.getDay();
@@ -813,27 +832,27 @@ function imprimirPonto(){
     const cfg = jornada[DOW[dow]];
     const expected = expectedMinutes(cfg);
     const delta = dayDelta(dia, expected);
-    totalMin += delta;
-    const worked = workedMinutes(dia);
-    const horarios = [["ent1","sai1"],["ent2","sai2"],["ent3","sai3"],["ent4","sai4"]]
-      .map(([e,s]) => (dia[e] || dia[s]) ? `${dia[e]||"--:--"}-${dia[s]||"--:--"}` : "")
-      .filter(Boolean).join("  ");
+    acumulado += delta;
+    const horarioCells = pares.map(([e,s]) => `<td>${dia[e]||""}</td><td>${dia[s]||""}</td>`).join("");
     rows += `<tr>
       <td>${d}</td><td>${DOW_LABEL[dow]}</td>
       <td>${OCC_LABEL[dia.ocorrencia || ""]}</td>
-      <td>${horarios}</td>
-      <td>${fmtMin(worked)}</td><td>${fmtMin(expected)}</td><td>${fmtMin(delta, true)}</td>
+      ${horarioCells}
+      <td>${fmtMin(delta, true)}</td><td>${fmtMin(acumulado, true)}</td>
     </tr>`;
   }
+  const horarioHeaders = pares.map((p,i) => `<th>Ent.${i+1}</th><th>Saí.${i+1}</th>`).join("");
   const printArea = document.getElementById("printArea");
   printArea.innerHTML = `
     <h1>Controle de Ponto — ${state.funcDoc.nome || ""}</h1>
     <h2>${monthNames[mes-1]} de ${ano} — Contabilidade Cricon</h2>
     <table>
-      <thead><tr><th>Dia</th><th>Sem.</th><th>Ocorrência</th><th>Horários</th><th>Trab.</th><th>Esp.</th><th>Saldo</th></tr></thead>
+      <thead><tr>
+        <th>Dia</th><th>Sem.</th><th>Ocorrência</th>${horarioHeaders}
+        <th>Saldo do dia</th><th>Saldo acumulado</th>
+      </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <p style="margin-top:14px;"><b>Saldo do mês:</b> ${fmtMin(totalMin, true)}</p>
     <div class="assinatura">
       <div>Assinatura do(a) funcionário(a)</div>
       <div>Data: ____/____/________</div>
