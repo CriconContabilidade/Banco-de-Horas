@@ -325,8 +325,11 @@ async function loadAllFuncionarios(){
 }
 
 async function loadAllRegistros(email){
-  const key = emailKey(email);
-  const q = query(collection(db, COL_REG), where("emailKey","==",key));
+  // Precisa filtrar pelo MESMO campo que a regra do Firestore usa
+  // (ownerEmail) para a consulta em lista ser "provável" pela regra —
+  // filtrar por outro campo (ex.: emailKey) faz o Firestore recusar a
+  // busca inteira com permission-denied, mesmo pros próprios dados.
+  const q = query(collection(db, COL_REG), where("ownerEmail","==",email.toLowerCase()));
   const snap = await getDocs(q);
   const list = [];
   snap.forEach(d => list.push({ id:d.id, ...d.data() }));
