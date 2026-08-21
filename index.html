@@ -754,10 +754,11 @@ async function refreshSaldoTotal(){
     if(elT){ elT.textContent = fmtMin(saldoFinal, true); elT.className = "value " + (saldoFinal>0?"pos":(saldoFinal<0?"neg":"")); }
   }catch(err){
     console.error("Erro ao calcular saldo total:", err);
+    const msg = "Erro: " + (err && (err.code || err.message) || err);
     const elA = document.getElementById("statSaldoAnterior");
     const elT = document.getElementById("statSaldoTotal");
-    if(elA) elA.textContent = "Erro ao carregar";
-    if(elT) elT.textContent = "Erro ao carregar";
+    if(elA){ elA.textContent = msg; elA.style.fontSize = "0.85rem"; }
+    if(elT){ elT.textContent = msg; elT.style.fontSize = "0.85rem"; }
   }
 }
 
