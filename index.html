@@ -739,18 +739,26 @@ function scheduleSave(){
 
 async function refreshSaldoTotal(){
   if(!document.getElementById("statSaldoTotal") && !document.getElementById("statSaldoAnterior")) return;
-  const email = state.viewEmail || state.user.email;
-  const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
-  const { ano, mes } = state.cur;
-  const registros = await loadAllRegistros(email);
-  const outros = registros.filter(r => !(r.ano === ano && r.mes === mes));
-  const saldoAnterior = computeSaldoBanco(outros, jornada);
-  const saldoMes = computeRegDocDelta(state.regDoc, jornada);
-  const saldoFinal = saldoAnterior + saldoMes;
-  const elA = document.getElementById("statSaldoAnterior");
-  const elT = document.getElementById("statSaldoTotal");
-  if(elA){ elA.textContent = fmtMin(saldoAnterior, true); elA.className = "value " + (saldoAnterior>0?"pos":(saldoAnterior<0?"neg":"")); }
-  if(elT){ elT.textContent = fmtMin(saldoFinal, true); elT.className = "value " + (saldoFinal>0?"pos":(saldoFinal<0?"neg":"")); }
+  try{
+    const email = state.viewEmail || state.user.email;
+    const jornada = (state.funcDoc && state.funcDoc.jornada) || JORNADA_PADRAO;
+    const { ano, mes } = state.cur;
+    const registros = await loadAllRegistros(email);
+    const outros = registros.filter(r => !(r.ano === ano && r.mes === mes));
+    const saldoAnterior = computeSaldoBanco(outros, jornada);
+    const saldoMes = computeRegDocDelta(state.regDoc, jornada);
+    const saldoFinal = saldoAnterior + saldoMes;
+    const elA = document.getElementById("statSaldoAnterior");
+    const elT = document.getElementById("statSaldoTotal");
+    if(elA){ elA.textContent = fmtMin(saldoAnterior, true); elA.className = "value " + (saldoAnterior>0?"pos":(saldoAnterior<0?"neg":"")); }
+    if(elT){ elT.textContent = fmtMin(saldoFinal, true); elT.className = "value " + (saldoFinal>0?"pos":(saldoFinal<0?"neg":"")); }
+  }catch(err){
+    console.error("Erro ao calcular saldo total:", err);
+    const elA = document.getElementById("statSaldoAnterior");
+    const elT = document.getElementById("statSaldoTotal");
+    if(elA) elA.textContent = "Erro ao carregar";
+    if(elT) elT.textContent = "Erro ao carregar";
+  }
 }
 
 async function refreshFerias(){
