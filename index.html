@@ -112,6 +112,11 @@
     border-radius:10px; padding:10px 14px; flex-wrap:wrap;
   }
   .funcrow .name { font-weight:600; flex:1; min-width:160px; }
+  .funcrow input.nome-input {
+    font-weight:600; flex:1; min-width:160px; background:#18212b; border:1px solid var(--border);
+    color:var(--text); border-radius:6px; padding:5px 8px; font-size:0.85rem;
+  }
+  .funcrow input.nome-input:focus { outline:none; border-color:var(--accent); }
   .funcrow .email { color:var(--text-dim); font-size:0.78rem; }
   .funcrow button {
     background:var(--card-hover); border:1px solid var(--border); color:var(--text); border-radius:8px;
@@ -607,7 +612,7 @@ function renderFuncionarios(){
   if(state.loadingFunc) return `<div class="loading">Carregando funcionários…</div>`;
   let rows = state.funcList.map(f => `
     <div class="funcrow">
-      <div class="name">${f.nome}</div>
+      <input class="nome-input" data-nome-email="${f.email}" value="${(f.nome||"").replace(/"/g,"&quot;")}" placeholder="Nome">
       <div class="email">${f.email}</div>
       <button data-view="${f.email}">Ver / editar ponto</button>
     </div>
@@ -656,6 +661,12 @@ function bindAppEvents(){
     state.viewEmail = el.dataset.view;
     state.tab = "meuponto";
     loadForCurrentView().then(render);
+  }));
+  qa("[data-nome-email]").forEach(el => el.addEventListener("change", async () => {
+    const f = state.funcList.find(x => x.email === el.dataset.nomeEmail);
+    if(!f) return;
+    f.nome = el.value.trim();
+    await saveFuncDoc(f);
   }));
 
   if(state.tab === "meuponto") refreshSaldoTotal();
