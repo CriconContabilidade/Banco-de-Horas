@@ -752,8 +752,8 @@ async function refreshSaldoTotal(){
   try{
     const registros = await loadAllRegistros(email);
     if(myRequestId !== saldoRequestSeq) return; // uma chamada mais nova já respondeu, descarta esta
-    const outros = registros.filter(r => !(r.ano === ano && r.mes === mes));
-    const saldoAnterior = computeSaldoBanco(outros, jornada);
+    const anteriores = registros.filter(r => r.ano < ano || (r.ano === ano && r.mes < mes));
+    const saldoAnterior = computeSaldoBanco(anteriores, jornada);
     const saldoMes = computeRegDocDelta(regDocAtCall, jornada);
     const saldoFinal = saldoAnterior + saldoMes;
     const elA = document.getElementById("statSaldoAnterior");
@@ -819,8 +819,8 @@ async function imprimirPonto(){
   let saldoAnterior = 0;
   try{
     const registros = await loadAllRegistros(email);
-    const outros = registros.filter(r => !(r.ano === ano && r.mes === mes));
-    saldoAnterior = computeSaldoBanco(outros, jornada);
+    const anteriores = registros.filter(r => r.ano < ano || (r.ano === ano && r.mes < mes));
+    saldoAnterior = computeSaldoBanco(anteriores, jornada);
   }catch(err){
     console.error("Erro ao calcular saldo anterior para impressão:", err);
   }
