@@ -176,7 +176,9 @@ const firebaseConfig = {
   measurementId: "G-8M7FRZQ79C"
 };
 
-const ADMIN_EMAILS = ["contabilidadecricon@gmail.com", "guilherme.primetherapy@gmail.com"];
+const ADMIN_EMAILS = ["contabilidadecricon@gmail.com", "guilherme.primetherapy@gmail.com", "rh@cricon.com.br"];
+// admins que não preenchem cartão ponto próprio (só gerenciam o dos outros)
+const ADMIN_SEM_PONTO_PROPRIO = ["rh@cricon.com.br"];
 const COL_FUNC = "ponto_funcionarios";
 const COL_REG = "ponto_registros";
 const DOW = ["dom","seg","ter","qua","qui","sex","sab"];
@@ -201,6 +203,9 @@ function emailKey(email){
 }
 function isAdminEmail(email){
   return ADMIN_EMAILS.includes((email||"").trim().toLowerCase());
+}
+function isAdminSemPontoProprio(email){
+  return ADMIN_SEM_PONTO_PROPRIO.includes((email||"").trim().toLowerCase());
 }
 function normalizeTimeStr(value){
   if(!value) return "";
@@ -267,6 +272,7 @@ let state = {
   screen: "boot", // boot | login | app
   user: null,
   isAdmin: false,
+  semPontoProprio: false,
   tab: "meuponto", // meuponto | ferias | funcionarios
   viewEmail: null, // qual funcionário está sendo visto/editado
   cur: todayYMD(),
@@ -421,8 +427,8 @@ function render(){
     </div>
   </div>
   <div class="tabs">
-    <div class="tab ${state.tab==='meuponto'?'active':''}" data-tab="meuponto">📅 ${viewingOther ? 'Ponto de '+ (state.funcDoc?.nome||viewEmail) : 'Meu Ponto'}</div>
-    <div class="tab ${state.tab==='ferias'?'active':''}" data-tab="ferias">🏖️ Férias</div>
+    ${(!state.semPontoProprio || viewingOther) ? `<div class="tab ${state.tab==='meuponto'?'active':''}" data-tab="meuponto">📅 ${viewingOther ? 'Ponto de '+ (state.funcDoc?.nome||viewEmail) : 'Meu Ponto'}</div>` : ``}
+    ${(!state.semPontoProprio || viewingOther) ? `<div class="tab ${state.tab==='ferias'?'active':''}" data-tab="ferias">🏖️ Férias</div>` : ``}
     ${state.isAdmin ? `<div class="tab ${state.tab==='funcionarios'?'active':''}" data-tab="funcionarios">👥 Funcionários</div>` : ``}
   </div>
   <main>`;
@@ -641,6 +647,7 @@ function bindAppEvents(){
   if(q("#btnLogout")) q("#btnLogout").addEventListener("click", () => signOut(auth));
   if(q("#btnVoltarMeu")) q("#btnVoltarMeu").addEventListener("click", () => {
     state.viewEmail = null;
+    if(state.semPontoProprio) state.tab = "funcionarios";
     loadForCurrentView().then(render);
   });
 
@@ -1010,6 +1017,8 @@ onAuthStateChanged(auth, async (user) => {
   if(user){
     state.user = user;
     state.isAdmin = isAdminEmail(user.email);
+    state.semPontoProprio = isAdminSemPontoProprio(user.email);
+    if(state.semPontoProprio) state.tab = "funcionarios";
     state.screen = "app";
     await loadForCurrentView();
     render();
