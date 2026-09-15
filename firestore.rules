@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function isAdminPonto() {
+      return signedIn() && myEmail() in
+        ['contabilidadecricon@gmail.com', 'guilherme.primetherapy@gmail.com', 'rh@cricon.com.br'];
+    }
+
+    match /fechamentos_escritorio/{doc} {
+      allow read, write: if true;
+    }
+    match /rubricas_config/{doc} {
+      allow read, write: if true;
+    }
+    match /rubricas_catalogo/{doc} {
+      allow read, write: if true;
+    }
+    match /rubricas_cards/{doc} {
+      allow read, write: if true;
+    }
+
+    match /ponto_funcionarios/{empId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && (
+        isAdminPonto() || request.resource.data.email.lower() == myEmail()
+      );
+      allow update: if signedIn() && (
+        isAdminPonto() ||
+        (resource.data.email.lower() == myEmail() &&
+         request.resource.data.feriasSaldoBase == resource.data.feriasSaldoBase &&
+         request.resource.data.feriasBaseEm == resource.data.feriasBaseEm)
+      );
+      allow delete: if isAdminPonto();
+    }
+
+    match /assistenteIA_empresas/{empId} {
+      allow read, write: if signedIn();
+
+      match /mensagens/{msgId} {
+        allow read, write: if signedIn();
+      }
+
+      match /documentos/{docId} {
+        allow read: if signedIn();
+        allow write: if false; // só a Cloud Function (Admin SDK) grava aqui
+      }
+
+      // Estado do fechamento por competência: alimenta o painel da tela. Quem grava é
+      // sempre a Cloud Function, a partir do que a IA apura — o navegador só lê.
+      match /fechamentos/{competencia} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+    }
+
+    match /ponto_registros/{docId} {
+      // Comparação direta (sem .lower() em resource.data), porque
+      // ownerEmail já é sempre salvo em minúsculas pelo app, e o
+      // Firestore só consegue "provar" uma consulta em lista (where) se a
+      // regra comparar o MESMO campo do filtro sem transformação nele.
+      allow read: if signedIn() && (
+        isAdminPonto() || resource == null || resource.data.ownerEmail == myEmail()
+      );
+      allow create: if signedIn() && (
+        isAdminPonto() || request.resource.data.ownerEmail == myEmail()
+      );
+      allow update: if signedIn() && (
+        isAdminPonto() || resource.data.ownerEmail == myEmail()
+      );
+      allow delete: if isAdminPonto();
+    }
+
+  }
+}
