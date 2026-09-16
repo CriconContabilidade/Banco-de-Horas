@@ -36,22 +36,45 @@ service cloud.firestore {
       allow delete: if isAdminPonto();
     }
 
+    // Stagiario: admin vê tudo; funcionário vê empresa sem responsável (de todo mundo) ou
+    // atribuída a ele. responsavelEmail é sempre gravado em minúsculas pelo app — a
+    // comparação é direta pra regra conseguir "provar" as consultas por igualdade da lista.
+    function podeVerEmpresa(dados) {
+      return isAdminPonto()
+        || !('responsavelEmail' in dados)
+        || dados.responsavelEmail == ''
+        || dados.responsavelEmail == myEmail();
+    }
+    function podeVerEmpresaPai(empId) {
+      return podeVerEmpresa(get(/databases/$(database)/documents/assistenteIA_empresas/$(empId)).data);
+    }
+
     match /assistenteIA_empresas/{empId} {
-      allow read, write: if signedIn();
+      allow read: if signedIn() && podeVerEmpresa(resource.data);
+      // funcionário cria empresa sempre sem responsável; atribuir é coisa de admin
+      allow create: if signedIn() && (
+        isAdminPonto() || request.resource.data.get('responsavelEmail', '') == ''
+      );
+      allow update: if signedIn() && podeVerEmpresa(resource.data) && (
+        isAdminPonto() ||
+        request.resource.data.get('responsavelEmail', '') == resource.data.get('responsavelEmail', '')
+      );
+      allow delete: if isAdminPonto();
 
       match /mensagens/{msgId} {
-        allow read, write: if signedIn();
+        allow read, create: if signedIn() && podeVerEmpresaPai(empId);
+        allow update, delete: if isAdminPonto();
       }
 
       match /documentos/{docId} {
-        allow read: if signedIn();
+        allow read: if signedIn() && podeVerEmpresaPai(empId);
         allow write: if false; // só a Cloud Function (Admin SDK) grava aqui
       }
 
       // Estado do fechamento por competência: alimenta o painel da tela. Quem grava é
       // sempre a Cloud Function, a partir do que a IA apura — o navegador só lê.
       match /fechamentos/{competencia} {
-        allow read: if signedIn();
+        allow read: if signedIn() && podeVerEmpresaPai(empId);
         allow write: if false;
       }
     }
