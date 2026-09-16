@@ -39,9 +39,11 @@ service cloud.firestore {
     // Stagiario: admin vê tudo; funcionário vê empresa sem responsável (de todo mundo) ou
     // atribuída a ele. responsavelEmail é sempre gravado em minúsculas pelo app — a
     // comparação é direta pra regra conseguir "provar" as consultas por igualdade da lista.
+    // Não aceitar "campo ausente" aqui: numa consulta de lista essa checagem fazia o
+    // Firestore liberar a consulta ampla (testado no emulador). Empresas antigas sem o
+    // campo são preenchidas pelo app do admin.
     function podeVerEmpresa(dados) {
       return isAdminPonto()
-        || !('responsavelEmail' in dados)
         || dados.responsavelEmail == ''
         || dados.responsavelEmail == myEmail();
     }
