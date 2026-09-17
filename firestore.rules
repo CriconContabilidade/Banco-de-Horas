@@ -57,14 +57,29 @@ service cloud.firestore {
       allow create: if signedIn() && (
         isAdminPonto() || request.resource.data.get('responsavelEmail', '') == ''
       );
+      // Funcionário só pode mexer em "notas" (observações) — nome, CNPJ, código do Domínio
+      // e responsavelEmail são só de admin. Antes só travava responsavelEmail: um funcionário
+      // com acesso a QUALQUER empresa (inclusive sem responsável, que é visível a todo mundo)
+      // podia reescrever nome/CNPJ/código do Domínio de qualquer uma.
       allow update: if signedIn() && podeVerEmpresa(resource.data) && (
         isAdminPonto() ||
-        request.resource.data.get('responsavelEmail', '') == resource.data.get('responsavelEmail', '')
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['notas'])
       );
       allow delete: if isAdminPonto();
 
       match /mensagens/{msgId} {
-        allow read, create: if signedIn() && podeVerEmpresaPai(empId);
+        allow read: if signedIn() && podeVerEmpresaPai(empId);
+        // O navegador só grava mensagem de usuário, ou (o app grava isso hoje quando a
+        // Cloud Function falha/expira) uma mensagem curta de erro do assistente — nunca com
+        // "arquivosGerados": só a Cloud Function (Admin SDK) grava um arquivo de verdade.
+        // Sem essa checagem, qualquer usuário com acesso à empresa podia forjar uma resposta
+        // "role": "assistant" com um arquivo falso, como se tivesse vindo da IA.
+        allow create: if signedIn() && podeVerEmpresaPai(empId)
+          && request.resource.data.role in ['user', 'assistant']
+          && request.resource.data.text is string
+          && request.resource.data.text.size() < 20000
+          && request.resource.data.keys().hasOnly(['role', 'text', 'files', 'criadoEm'])
+          && (!('files' in request.resource.data) || request.resource.data.files is list);
         allow update, delete: if isAdminPonto();
       }
 
