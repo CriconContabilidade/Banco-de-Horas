@@ -78,7 +78,8 @@ service cloud.firestore {
           && request.resource.data.role in ['user', 'assistant']
           && request.resource.data.text is string
           && request.resource.data.text.size() < 20000
-          && request.resource.data.keys().hasOnly(['role', 'text', 'files', 'criadoEm'])
+          && request.resource.data.keys().hasOnly(['role', 'text', 'files', 'criadoEm', 'requestId'])
+          && (!('requestId' in request.resource.data) || (request.resource.data.requestId is string && request.resource.data.requestId.size() < 100))
           && (!('files' in request.resource.data) || request.resource.data.files is list);
         allow update, delete: if isAdminPonto();
       }
