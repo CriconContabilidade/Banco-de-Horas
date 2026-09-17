@@ -76,13 +76,13 @@ service cloud.firestore {
 
       match /mensagens/{msgId} {
         allow read: if signedIn() && podeVerEmpresaPai(empId);
-        // O navegador só grava mensagem de usuário, ou (o app grava isso hoje quando a
-        // Cloud Function falha/expira) uma mensagem curta de erro do assistente — nunca com
-        // "arquivosGerados": só a Cloud Function (Admin SDK) grava um arquivo de verdade.
-        // Sem essa checagem, qualquer usuário com acesso à empresa podia forjar uma resposta
-        // "role": "assistant" com um arquivo falso, como se tivesse vindo da IA.
+        // O navegador só grava mensagem de usuário — "role": "assistant" é só a Cloud Function
+        // (Admin SDK) quem grava. Erro de rede/timeout do lado do cliente não persiste mais
+        // aqui (fica só na tela de quem enviou); antes ficava permitido "role": "assistant"
+        // pra esse caso, e isso deixava qualquer usuário com acesso à empresa forjar uma
+        // resposta como se tivesse vindo da IA (o texto, não só arquivosGerados).
         allow create: if signedIn() && podeVerEmpresaPai(empId)
-          && request.resource.data.role in ['user', 'assistant']
+          && request.resource.data.role == 'user'
           && request.resource.data.text is string
           && request.resource.data.text.size() < 20000
           && request.resource.data.keys().hasOnly(['role', 'text', 'files', 'criadoEm', 'requestId'])
