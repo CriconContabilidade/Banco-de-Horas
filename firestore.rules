@@ -4,9 +4,16 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
     function myEmail() { return request.auth.token.email.lower(); }
+    // Custom claim "admin" (setado pela Cloud Function sincronizarClaimsAdmin, no Assistente-
+    // IA) é o caminho de verdade agora — a lista de e-mail fica como rede de segurança
+    // enquanto o claim não é confirmado em produção (custom claim só aparece no token depois
+    // de logout/login; sem esse fallback, um problema na sincronização destrancaria admin até
+    // alguém perceber). Mesma lista usada em functions/index.js e index.html do Assistente-IA.
     function isAdminPonto() {
-      return signedIn() && myEmail() in
-        ['contabilidadecricon@gmail.com', 'guilherme.primetherapy@gmail.com', 'rh@cricon.com.br'];
+      return signedIn() && (
+        request.auth.token.admin == true ||
+        myEmail() in ['contabilidadecricon@gmail.com', 'guilherme.primetherapy@gmail.com', 'rh@cricon.com.br']
+      );
     }
 
     match /fechamentos_escritorio/{doc} {
