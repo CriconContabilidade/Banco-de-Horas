@@ -102,6 +102,20 @@ service cloud.firestore {
         allow read: if signedIn() && podeVerEmpresaPai(empId);
         allow write: if false;
       }
+
+      // Consumo mensal da IA por empresa (valores em dólar): só admin lê; quem grava é a Cloud
+      // Function. Funcionário vê apenas o percentual, que fica no próprio documento da empresa.
+      match /consumo/{mes} {
+        allow read: if isAdminPonto();
+        allow write: if false;
+      }
+    }
+
+    // Consumo da IA do escritório inteiro (total do mês e limite, em dólar): só admin lê;
+    // quem grava é a Cloud Function.
+    match /assistenteIA_consumoGeral/{docId} {
+      allow read: if isAdminPonto();
+      allow write: if false;
     }
 
     match /ponto_registros/{docId} {
