@@ -16,17 +16,24 @@ service cloud.firestore {
       );
     }
 
+    // Fechamentos e Rubricas: os dois apps pedem login por e-mail e senha antes de ler ou gravar
+    // qualquer coisa, então basta exigir usuário logado. Antes era "if true": qualquer pessoa, sem
+    // login, podia ler, alterar e apagar. Login anônimo não vale (o Stagiario usa anônimo no
+    // projeto do cadastro compartilhado, que é outro).
+    function logadoComConta() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
     match /fechamentos_escritorio/{doc} {
-      allow read, write: if true;
+      allow read, write: if logadoComConta();
     }
     match /rubricas_config/{doc} {
-      allow read, write: if true;
+      allow read, write: if logadoComConta();
     }
     match /rubricas_catalogo/{doc} {
-      allow read, write: if true;
+      allow read, write: if logadoComConta();
     }
     match /rubricas_cards/{doc} {
-      allow read, write: if true;
+      allow read, write: if logadoComConta();
     }
 
     match /ponto_funcionarios/{empId} {
@@ -60,9 +67,14 @@ service cloud.firestore {
 
     match /assistenteIA_empresas/{empId} {
       allow read: if signedIn() && podeVerEmpresa(resource.data);
-      // funcionário cria empresa sempre sem responsável; atribuir é coisa de admin
+      // funcionário cria empresa sempre sem responsável; atribuir é coisa de admin. Só os campos
+      // que a tela envia: limiteMensalUsd, usoPct, esforco e afins são do backend/admin, e sem
+      // essa lista fechada um funcionário podia criar a empresa já com limite alto ou esforço "max".
       allow create: if signedIn() && (
-        isAdminPonto() || request.resource.data.get('responsavelEmail', '') == ''
+        isAdminPonto() || (
+          request.resource.data.get('responsavelEmail', '') == ''
+          && request.resource.data.keys().hasOnly(['nome', 'codigoDominio', 'cnpj', 'notas', 'responsavelEmail', 'criadoEm'])
+        )
       );
       // Funcionário só pode mexer em "notas" (observações) — nome, CNPJ, código do Domínio
       // e responsavelEmail são só de admin. Antes só travava responsavelEmail: um funcionário
